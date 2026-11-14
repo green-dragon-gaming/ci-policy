@@ -6,10 +6,11 @@
 # ruleset — never from the pull request — so a pull request cannot modify the check that
 # is judging it.  That is the entire mechanism.
 #
-# IT HOLDS ONLY BECAUSE AGENTS CANNOT WRITE HERE.  Measured 2026-11-14: the agent PAT is
-# granted green-dragon-gaming/handwavium ONLY (403 on every permission-bearing endpoint of
-# every other repository), and it is 403 on /orgs/green-dragon-gaming/rulesets, so it can
-# edit neither this file nor the rule that pins it.
+# IT HOLDS ONLY BECAUSE AGENTS CANNOT WRITE HERE.  This repository is PUBLIC so that the
+# pinned check is auditable by anyone, including the agents it polices.  Public is a READ
+# grant to the world; it is not a write grant.  The agent PAT is granted
+# green-dragon-gaming/handwavium ONLY, and it is 403 on /orgs/green-dragon-gaming/rulesets,
+# so it can edit neither this file nor the rule that pins it.
 #
 #   >>> IF THAT TOKEN IS EVER RE-SCOPED TO "ALL REPOSITORIES", OR THIS REPOSITORY IS ADDED
 #   >>> TO ITS SELECTED LIST, THIS PROTECTION IS GONE AND NOTHING WILL SAY SO.
@@ -19,11 +20,16 @@
 # delete or rename main-audit.yml, or add a workflow of its own.  To change a workflow
 # legitimately: open the pull request, read the diff, add the new hash here, re-run.  That
 # human step is the review the gate floor was always supposed to have.
+#
+# NOTE ON STYLE: this script deliberately uses echo rather than printf, and contains no
+# backslash characters at all.  A printf format string containing a backslash-n does not
+# reliably survive being copied through a rendered document, and a mangled continuation
+# line silently breaks the YAML block scalar -- which presents as "Workflow must have one
+# of the following triggers configured".  That cost a day.  See GRE-104.
 
 name: workflow-integrity
 
 on: [pull_request]
-
 
 permissions:
   contents: read
@@ -51,16 +57,20 @@ jobs:
           if [ -d .github/workflows ]; then
             while IFS= read -r f; do
               h="$(sha256sum "$f" | cut -d' ' -f1)"
-              if grep -qxF "$h  $f" "$allow"; then printf 'ok           %s
-' "$f"
-              else printf 'NOT ALLOWED  %s  %s
-' "$f" "$h"; status=1; fi
-            done < <(find .github/workflows -type f | sed 's|^\./||' | sort)
+              if grep -qxF "$h  $f" "$allow"; then
+                echo "ok           $f"
+              else
+                echo "NOT ALLOWED  $f  $h"
+                status=1
+              fi
+            done < <(find .github/workflows -type f | sort)
           fi
           while read -r h p; do
-            case "${h:-}" in ''|\#*) continue ;; esac
-            [ -f "$p" ] || { printf 'MISSING      %s
-' "$p"; status=1; }
+            case "${h:-}" in ''|'#'*) continue ;; esac
+            if [ ! -f "$p" ]; then
+              echo "MISSING      $p"
+              status=1
+            fi
           done <"$allow"
           if [ "$status" -ne 0 ]; then
             echo
