@@ -1,0 +1,72 @@
+# .github/workflows/workflow-integrity.yml — green-dragon-gaming/ci-policy
+#
+# THE PINNED REQUIRED WORKFLOW FOR green-dragon-gaming/handwavium.  GRE-104 / R-ORG-4.
+#
+# GitHub takes this definition from THIS repository at the ref pinned in the organisation
+# ruleset — never from the pull request — so a pull request cannot modify the check that
+# is judging it.  That is the entire mechanism.
+#
+# IT HOLDS ONLY BECAUSE AGENTS CANNOT WRITE HERE.  Measured 2026-11-14: the agent PAT is
+# granted green-dragon-gaming/handwavium ONLY (403 on every permission-bearing endpoint of
+# every other repository), and it is 403 on /orgs/green-dragon-gaming/rulesets, so it can
+# edit neither this file nor the rule that pins it.
+#
+#   >>> IF THAT TOKEN IS EVER RE-SCOPED TO "ALL REPOSITORIES", OR THIS REPOSITORY IS ADDED
+#   >>> TO ITS SELECTED LIST, THIS PROTECTION IS GONE AND NOTHING WILL SAY SO.
+#
+# WHAT IT ENFORCES: every file under .github/workflows/ in the pull request head must
+# appear in the allowlist below by sha256.  A pull request therefore cannot gut gates.yml,
+# delete or rename main-audit.yml, or add a workflow of its own.  To change a workflow
+# legitimately: open the pull request, read the diff, add the new hash here, re-run.  That
+# human step is the review the gate floor was always supposed to have.
+
+name: workflow-integrity
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  workflow-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pull request head — the content that would merge
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Every executable workflow must be allowlisted, and none may vanish
+        run: |
+          set -uo pipefail
+          allow="$RUNNER_TEMP/allowed-workflows.sha256"
+          cat >"$allow" <<'ALLOWLIST'
+          # sha256                                                            path
+          # handwavium main @ e48fa7e (2026-11-14) — the two files that exist today.
+          500cea1c843b470de41060dcc7bc1d1d349cf9bf4493667223e0c1453b583560  .github/workflows/gates.yml
+          c290843b44a31879c375b9c38d7745651ce1a3de4b4f7ce1b0c697f57c5c09d5  .github/workflows/main-audit.yml
+          ALLOWLIST
+          status=0
+          if [ -d .github/workflows ]; then
+            while IFS= read -r f; do
+              h="$(sha256sum "$f" | cut -d' ' -f1)"
+              if grep -qxF "$h  $f" "$allow"; then printf 'ok           %s
+' "$f"
+              else printf 'NOT ALLOWED  %s  %s
+' "$f" "$h"; status=1; fi
+            done < <(find .github/workflows -type f | sed 's|^\./||' | sort)
+          fi
+          while read -r h p; do
+            case "${h:-}" in ''|\#*) continue ;; esac
+            [ -f "$p" ] || { printf 'MISSING      %s
+' "$p"; status=1; }
+          done <"$allow"
+          if [ "$status" -ne 0 ]; then
+            echo
+            echo "This pull request changes what CI executes.  That is not a bug in this"
+            echo "check: read the diff, then add the new sha256 to the allowlist in"
+            echo "green-dragon-gaming/ci-policy and re-run.  See GRE-104."
+          fi
+          exit $status
