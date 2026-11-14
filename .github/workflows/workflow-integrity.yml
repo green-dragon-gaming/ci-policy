@@ -24,7 +24,7 @@ name: workflow-integrity
 
 on:
   pull_request:
-    branches: [main]
+
 
 permissions:
   contents: read
