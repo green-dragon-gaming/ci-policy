@@ -52,6 +52,7 @@ jobs:
           # handwavium main @ e48fa7e (2026-11-14) — the two files that exist today.
           500cea1c843b470de41060dcc7bc1d1d349cf9bf4493667223e0c1453b583560  .github/workflows/gates.yml
           c290843b44a31879c375b9c38d7745651ce1a3de4b4f7ce1b0c697f57c5c09d5  .github/workflows/main-audit.yml
+          6b00529f0cb7a46dad47027373f8ebb42ceddfe10dd074fd4149f28902d2ef4b  .github/workflows/main-audit.yml
           ALLOWLIST
           status=0
           if [ -d .github/workflows ]; then
