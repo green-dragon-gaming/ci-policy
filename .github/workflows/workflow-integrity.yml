@@ -54,6 +54,7 @@ jobs:
           c290843b44a31879c375b9c38d7745651ce1a3de4b4f7ce1b0c697f57c5c09d5  .github/workflows/main-audit.yml
           6b00529f0cb7a46dad47027373f8ebb42ceddfe10dd074fd4149f28902d2ef4b  .github/workflows/main-audit.yml
           3df847a24ebba7051ae7f3e848ed6f964f21b7a339daff3387744d14215f0a42  .github/workflows/main-audit.yml
+          35b10b71b8a858aea0fece692ee8de83d1f9e8c3d747683dfcc541b295d6619f .github/workflows/main-audit.yml
           ALLOWLIST
           status=0
           if [ -d .github/workflows ]; then
